@@ -2,7 +2,8 @@ import sqlite3
 import json
 from datetime import datetime
 
-DB_PATH = "D:/multi-disease-predictor/predictions.db"
+import os
+DB_PATH = os.path.join(os.path.expanduser("~"), "predictions.db")
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
