@@ -3,7 +3,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import sys
-sys.path.append("D:/multi-disease-predictor")
+
 from database.db import init_db, save_prediction, get_history
 
 # ── Page Config ────────────────────────────────────────
@@ -106,9 +106,9 @@ init_db()
 @st.cache_resource
 def load_models():
     return {
-        "Heart Disease" : joblib.load("D:/multi-disease-predictor/saved_models/heart_svm.pkl"),
-        "Diabetes"      : joblib.load("D:/multi-disease-predictor/saved_models/diabetes_svm.pkl"),
-        "Liver Disease" : joblib.load("D:/multi-disease-predictor/saved_models/liver_svm.pkl"),
+        "Heart Disease" : joblib.load("saved_models/heart_svm.pkl"),
+        "Diabetes"      : joblib.load("saved_models/diabetes_svm.pkl"),
+        "Liver Disease" : joblib.load("saved_models/liver_svm.pkl"),
     }
 
 models = load_models()
