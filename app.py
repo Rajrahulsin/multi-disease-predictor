@@ -111,7 +111,7 @@ with st.sidebar:
     st.markdown("## 🧬 MediPredict AI")
     st.markdown("---")
     st.markdown("### Navigation")
-    page = st.radio("", [
+    page = st.radio("Navigation", [
         "Predict",
         "AI Health Assistant",
         "Parameter Guide",
@@ -295,15 +295,13 @@ elif page == "AI Health Assistant":
     st.markdown("<p style='color:#8b8fa8'>Describe your symptoms in plain English — our AI will assess your risk and explain everything simply</p>", unsafe_allow_html=True)
     st.markdown("---")
 
-    api_key = st.text_input(
-        "Enter your Claude API Key",
-        type="password",
-        placeholder="sk-ant-..."
-    )
-    st.caption("Get your free API key from console.anthropic.com")
-
+    api_key = st.secrets.get("GROQ_API_KEY", None)
+    if not api_key:
+        st.error("API key not configured.")
+        st.stop()
+    
     if api_key:
-        import anthropic
+        from groq import Groq
 
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
@@ -345,21 +343,21 @@ Start by warmly greeting the user and asking what health concern brings them her
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     try:
-                        client = anthropic.Anthropic(api_key=api_key)
-                        response = client.messages.create(
-                            model="claude-sonnet-4-6",
+                        from groq import Groq
+                        client = Groq(api_key=api_key)
+                        response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
                             max_tokens=1024,
-                            system=SYSTEM_PROMPT,
-                            messages=st.session_state.conversation
+                            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.conversation
                         )
-                        assistant_reply = response.content[0].text
+                        assistant_reply = response.choices[0].message.content
                         st.markdown(assistant_reply)
 
                         st.session_state.chat_history.append({"role": "assistant", "content": assistant_reply})
                         st.session_state.conversation.append({"role": "assistant", "content": assistant_reply})
 
                     except Exception as e:
-                        st.error("API Error — please check your API key and try again!")
+                       st.error(f"API Error: {str(e)}")
 
         if st.session_state.chat_history:
             if st.button("Clear Chat"):
