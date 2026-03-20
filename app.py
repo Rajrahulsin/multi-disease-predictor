@@ -2,11 +2,8 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
-import sys
-
 from database.db import init_db, save_prediction, get_history
 
-# ── Page Config ────────────────────────────────────────
 st.set_page_config(
     page_title="MediPredict AI",
     page_icon="🧬",
@@ -14,7 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── Custom CSS ─────────────────────────────────────────
 st.markdown("""
 <style>
     .stApp { background-color: #0f1117; }
@@ -99,10 +95,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Initialize DB ──────────────────────────────────────
 init_db()
 
-# ── Load Models ────────────────────────────────────────
 @st.cache_resource
 def load_models():
     return {
@@ -113,13 +107,13 @@ def load_models():
 
 models = load_models()
 
-# ── Sidebar ────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🧬 MediPredict AI")
     st.markdown("---")
     st.markdown("### Navigation")
     page = st.radio("", [
         "Predict",
+        "AI Health Assistant",
         "Parameter Guide",
         "Dataset Info",
         "History"
@@ -163,7 +157,6 @@ if page == "Predict":
     st.markdown(f"<div class='disease-badge'>🧬 {disease}</div>", unsafe_allow_html=True)
     st.caption("Not sure what a parameter means? Check the **Parameter Guide** in the sidebar.")
 
-    # ── Heart Disease ───────────────────────────────────
     if disease == "Heart Disease":
         st.markdown("<div class='section-header'><h3>Patient Information</h3></div>", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
@@ -198,7 +191,6 @@ if page == "Predict":
         if oldpeak > 2:    warnings.append("ST Depression is significant (above 2) — possible heart stress")
         for w in warnings: st.warning(w)
 
-    # ── Diabetes ────────────────────────────────────────
     elif disease == "Diabetes":
         st.markdown("<div class='section-header'><h3>Patient Information</h3></div>", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
@@ -224,7 +216,6 @@ if page == "Predict":
         if insulin > 25:  warnings.append("Insulin level is elevated (above 25 IU/ml) — possible insulin resistance")
         for w in warnings: st.warning(w)
 
-    # ── Liver Disease ───────────────────────────────────
     elif disease == "Liver Disease":
         st.markdown("<div class='section-header'><h3>Patient Information</h3></div>", unsafe_allow_html=True)
         col1, col2 = st.columns(2)
@@ -255,7 +246,6 @@ if page == "Predict":
         if agr < 1.0:     warnings.append("Albumin/Globulin Ratio is low (below 1.0) — possible liver or immune disorder")
         for w in warnings: st.warning(w)
 
-    # ── Predict Button ──────────────────────────────────
     st.markdown("---")
     if st.button("Run Prediction"):
         X_input    = pd.DataFrame([input_data], columns=feature_names)
@@ -295,10 +285,106 @@ if page == "Predict":
         )
         st.toast("Prediction saved to history!", icon="✅")
 
-    st.markdown("<div class='footer' style='color:#8b8fa8'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
+    st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
-# PAGE 2 — PARAMETER GUIDE
+# PAGE 2 — AI HEALTH ASSISTANT
+# ══════════════════════════════════════════════════════
+elif page == "AI Health Assistant":
+    st.markdown("## AI Health Assistant")
+    st.markdown("<p style='color:#8b8fa8'>Describe your symptoms in plain English — our AI will assess your risk and explain everything simply</p>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    api_key = st.text_input(
+        "Enter your Claude API Key",
+        type="password",
+        placeholder="sk-ant-..."
+    )
+    st.caption("Get your free API key from console.anthropic.com")
+
+    if api_key:
+        import anthropic
+
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = []
+        if "conversation" not in st.session_state:
+            st.session_state.conversation = []
+
+        SYSTEM_PROMPT = """You are MediPredict AI Health Assistant, a friendly medical screening chatbot.
+
+Your job is to:
+1. Have a friendly conversation about the user's symptoms, age, and health concerns
+2. Ask relevant follow up questions naturally, one or two at a time
+3. Assess their risk for Heart Disease, Diabetes, or Liver Disease based on what they share
+4. Explain everything in very simple language anyone can understand
+5. Always recommend consulting a real doctor for proper diagnosis
+6. Be warm, empathetic and reassuring — never scary or alarmist
+
+Important rules:
+- Never diagnose — only assess risk level as Low, Moderate, or High
+- Always recommend seeing a doctor if risk is moderate or high
+- Use simple everyday language, avoid medical jargon
+- If user mentions emergency symptoms like severe chest pain or difficulty breathing, tell them to call emergency services immediately
+- You are a screening tool, not a replacement for medical care
+
+Start by warmly greeting the user and asking what health concern brings them here today."""
+
+        for msg in st.session_state.chat_history:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+        user_input = st.chat_input("Describe your symptoms or ask a health question...")
+
+        if user_input:
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            st.session_state.conversation.append({"role": "user", "content": user_input})
+
+            with st.chat_message("user"):
+                st.markdown(user_input)
+
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    try:
+                        client = anthropic.Anthropic(api_key=api_key)
+                        response = client.messages.create(
+                            model="claude-sonnet-4-6",
+                            max_tokens=1024,
+                            system=SYSTEM_PROMPT,
+                            messages=st.session_state.conversation
+                        )
+                        assistant_reply = response.content[0].text
+                        st.markdown(assistant_reply)
+
+                        st.session_state.chat_history.append({"role": "assistant", "content": assistant_reply})
+                        st.session_state.conversation.append({"role": "assistant", "content": assistant_reply})
+
+                    except Exception as e:
+                        st.error("API Error — please check your API key and try again!")
+
+        if st.session_state.chat_history:
+            if st.button("Clear Chat"):
+                st.session_state.chat_history = []
+                st.session_state.conversation = []
+                st.rerun()
+
+    else:
+        st.info("Please enter your Claude API key above to start chatting!")
+        st.markdown("""
+        <div class='param-card' style='margin-top:16px'>
+            <p style='color:#7c83fd; font-size:0.9rem; margin:0 0 8px 0'>How to get your free API key:</p>
+            <p style='color:#c0c4d6; font-size:0.85rem; margin:0; line-height:1.8'>
+            1. Go to console.anthropic.com<br>
+            2. Sign up for a free account<br>
+            3. Go to API Keys section<br>
+            4. Click Create Key<br>
+            5. Copy and paste it above
+            </p>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════
+# PAGE 3 — PARAMETER GUIDE
 # ══════════════════════════════════════════════════════
 elif page == "Parameter Guide":
     st.markdown("## Parameter Guide")
@@ -324,246 +410,59 @@ elif page == "Parameter Guide":
     if disease_guide == "Heart Disease":
         st.markdown("<div class='section-header'><h3>Heart Disease Parameters</h3></div>", unsafe_allow_html=True)
         show_params([
-            {
-                "name": "Age",
-                "simple": "How old are you?",
-                "detail": "Age is one of the biggest risk factors for heart disease. As we get older, the heart works harder and arteries can stiffen. Fatty deposits can also build up in arteries over decades.",
-                "normal": "Risk increases after:\n45 for men\n55 for women",
-                "unit": "Years"
-            },
-            {
-                "name": "Sex",
-                "simple": "Your biological sex",
-                "detail": "Men generally have a higher risk of heart disease at a younger age. Women's risk increases significantly after menopause when protective estrogen levels drop.",
-                "normal": "0 = Female\n1 = Male",
-                "unit": "0 or 1"
-            },
-            {
-                "name": "Chest Pain Type",
-                "simple": "What kind of chest pain do you feel?",
-                "detail": "Typical Angina is classic heart-related chest pain caused by reduced blood flow. Atypical Angina is chest discomfort not typical of the heart. Non-anginal Pain is chest pain unrelated to the heart. Asymptomatic means no chest pain at all.",
-                "normal": "0 = Typical Angina\n1 = Atypical Angina\n2 = Non-anginal Pain\n3 = Asymptomatic (no pain)",
-                "unit": "0, 1, 2, or 3"
-            },
-            {
-                "name": "Resting Blood Pressure",
-                "simple": "Your blood pressure when sitting quietly",
-                "detail": "Blood pressure is the force of blood pushing against artery walls. High blood pressure (hypertension) makes the heart work harder and damages artery walls over time, increasing the risk of heart attack and stroke.",
-                "normal": "Normal: below 120\nElevated: 120–129\nHigh Stage 1: 130–139\nHigh Stage 2: 140 or above",
-                "unit": "mm Hg"
-            },
-            {
-                "name": "Cholesterol",
-                "simple": "Amount of fatty substance in your blood",
-                "detail": "Cholesterol is a waxy fat-like substance in your blood. While your body needs some cholesterol, too much low-density lipoprotein (LDL or bad cholesterol) builds up in artery walls forming plaques that can block blood flow and cause a heart attack.",
-                "normal": "Normal: below 200\nBorderline High: 200–239\nHigh: 240 or above",
-                "unit": "mg/dl"
-            },
-            {
-                "name": "Fasting Blood Sugar",
-                "simple": "Is your blood sugar high after not eating for 8 hours?",
-                "detail": "High fasting blood sugar indicates diabetes or prediabetes. Diabetes is a major risk factor for heart disease because high blood sugar damages blood vessels and the nerves that control the heart.",
-                "normal": "0 = No (sugar below 120 — normal)\n1 = Yes (sugar above 120 — elevated)",
-                "unit": "0 or 1"
-            },
-            {
-                "name": "Resting ECG",
-                "simple": "Result of your heart electrical activity test at rest",
-                "detail": "An ECG (electrocardiogram) records electrical signals in your heart. Abnormal results can indicate previous heart attacks, irregular heartbeats, or a thickened heart muscle. This is done while you are resting.",
-                "normal": "0 = Normal\n1 = ST-T Wave Abnormality\n2 = Left Ventricular Hypertrophy",
-                "unit": "0, 1, or 2"
-            },
-            {
-                "name": "Max Heart Rate",
-                "simple": "Highest heart rate reached during exercise",
-                "detail": "A healthy heart speeds up significantly during physical activity. If your maximum heart rate during exercise testing is lower than expected for your age, it may indicate the heart is not pumping blood efficiently enough.",
-                "normal": "Formula: 220 minus your age\nExample: Age 50 = max 170 bpm\nBelow 100 bpm is concerning",
-                "unit": "Beats per minute"
-            },
-            {
-                "name": "Exercise Induced Angina",
-                "simple": "Do you feel chest pain or discomfort during exercise?",
-                "detail": "Chest pain during physical activity is a warning sign that the heart may not be getting enough oxygen-rich blood when demand increases. This condition is called exercise-induced angina and is a strong indicator of coronary artery disease.",
-                "normal": "0 = No (normal)\n1 = Yes (concerning — see a doctor)",
-                "unit": "0 or 1"
-            },
-            {
-                "name": "ST Depression (Oldpeak)",
-                "simple": "A change in your ECG reading during exercise compared to rest",
-                "detail": "During exercise an ECG can show a dip in a part of the graph called the ST segment. This is called ST depression. The larger the dip (higher oldpeak value), the more stress the heart is under during exercise.",
-                "normal": "Normal: 0 to 1\nMild concern: 1 to 2\nSignificant concern: above 2",
-                "unit": "mm"
-            },
-            {
-                "name": "Slope",
-                "simple": "Shape of the ECG curve at peak exercise",
-                "detail": "This describes whether the ST segment of the ECG goes up, stays flat, or goes down at maximum exercise. Downsloping is the most concerning pattern as it suggests reduced blood flow to the heart during exertion.",
-                "normal": "0 = Upsloping (normal)\n1 = Flat (borderline)\n2 = Downsloping (most concerning)",
-                "unit": "0, 1, or 2"
-            },
-            {
-                "name": "Major Vessels",
-                "simple": "Number of major blood vessels visible in a special scan",
-                "detail": "This value comes from a fluoroscopy scan where dye is injected to make blood vessels visible. Blocked or narrowed vessels appear differently. More blocked vessels means blood supply to the heart is more restricted.",
-                "normal": "0 = No blocked vessels (best)\n1–2 = Some blockage\n3 = Most blockage (highest risk)",
-                "unit": "0, 1, 2, or 3"
-            },
-            {
-                "name": "Thalassemia",
-                "simple": "Result of a nuclear stress test of heart blood flow",
-                "detail": "This comes from a thallium stress test where a small amount of radioactive substance is injected to show blood flow in the heart. A fixed defect means permanently damaged tissue. A reversible defect means an area that shows stress during exercise but recovers at rest.",
-                "normal": "0 = Normal blood flow\n1 = Fixed defect (permanent damage)\n2 = Reversible defect (stress-related)\n3 = Unknown",
-                "unit": "0, 1, 2, or 3"
-            },
+            {"name":"Age","simple":"How old are you?","detail":"Age is one of the biggest risk factors for heart disease. As we get older, the heart works harder and arteries can stiffen. Fatty deposits can also build up in arteries over decades.","normal":"Risk increases after:\n45 for men\n55 for women","unit":"Years"},
+            {"name":"Sex","simple":"Your biological sex","detail":"Men generally have a higher risk of heart disease at a younger age. Women's risk increases significantly after menopause when protective estrogen levels drop.","normal":"0 = Female\n1 = Male","unit":"0 or 1"},
+            {"name":"Chest Pain Type","simple":"What kind of chest pain do you feel?","detail":"Typical Angina is classic heart-related chest pain caused by reduced blood flow. Atypical Angina is chest discomfort not typical of the heart. Non-anginal Pain is chest pain unrelated to the heart. Asymptomatic means no chest pain at all.","normal":"0 = Typical Angina\n1 = Atypical Angina\n2 = Non-anginal Pain\n3 = Asymptomatic","unit":"0, 1, 2, or 3"},
+            {"name":"Resting Blood Pressure","simple":"Your blood pressure when sitting quietly","detail":"Blood pressure is the force of blood pushing against artery walls. High blood pressure makes the heart work harder and damages artery walls over time, increasing the risk of heart attack and stroke.","normal":"Normal: below 120\nElevated: 120–129\nHigh Stage 1: 130–139\nHigh Stage 2: 140 or above","unit":"mm Hg"},
+            {"name":"Cholesterol","simple":"Amount of fatty substance in your blood","detail":"Cholesterol is a waxy fat-like substance in your blood. Too much bad cholesterol builds up in artery walls forming plaques that can block blood flow and cause a heart attack.","normal":"Normal: below 200\nBorderline High: 200–239\nHigh: 240 or above","unit":"mg/dl"},
+            {"name":"Fasting Blood Sugar","simple":"Is your blood sugar high after not eating for 8 hours?","detail":"High fasting blood sugar indicates diabetes or prediabetes. Diabetes is a major risk factor for heart disease because high blood sugar damages blood vessels and nerves that control the heart.","normal":"0 = No (sugar below 120 — normal)\n1 = Yes (sugar above 120 — elevated)","unit":"0 or 1"},
+            {"name":"Resting ECG","simple":"Result of your heart electrical activity test at rest","detail":"An ECG records electrical signals in your heart. Abnormal results can indicate previous heart attacks, irregular heartbeats, or a thickened heart muscle.","normal":"0 = Normal\n1 = ST-T Wave Abnormality\n2 = Left Ventricular Hypertrophy","unit":"0, 1, or 2"},
+            {"name":"Max Heart Rate","simple":"Highest heart rate reached during exercise","detail":"A healthy heart speeds up significantly during physical activity. If your maximum heart rate during exercise is lower than expected for your age, it may indicate the heart is not pumping blood efficiently.","normal":"Formula: 220 minus your age\nExample: Age 50 = max 170 bpm\nBelow 100 bpm is concerning","unit":"Beats per minute"},
+            {"name":"Exercise Induced Angina","simple":"Do you feel chest pain during exercise?","detail":"Chest pain during physical activity is a warning sign that the heart may not be getting enough oxygen-rich blood when demand increases. This is a strong indicator of coronary artery disease.","normal":"0 = No (normal)\n1 = Yes (concerning)","unit":"0 or 1"},
+            {"name":"ST Depression (Oldpeak)","simple":"A change in your ECG reading during exercise","detail":"During exercise an ECG can show a dip called ST depression. The larger the dip, the more stress the heart is under during exercise.","normal":"Normal: 0 to 1\nMild concern: 1 to 2\nSignificant: above 2","unit":"mm"},
+            {"name":"Slope","simple":"Shape of the ECG curve at peak exercise","detail":"This describes whether the ST segment goes up, stays flat, or goes down at maximum exercise. Downsloping is the most concerning pattern.","normal":"0 = Upsloping (normal)\n1 = Flat (borderline)\n2 = Downsloping (concerning)","unit":"0, 1, or 2"},
+            {"name":"Major Vessels","simple":"Number of major blood vessels visible in a scan","detail":"This comes from a scan where dye is injected to make blood vessels visible. More blocked vessels means blood supply to the heart is more restricted.","normal":"0 = No blocked vessels (best)\n1–2 = Some blockage\n3 = Most blockage (highest risk)","unit":"0, 1, 2, or 3"},
+            {"name":"Thalassemia","simple":"Result of a nuclear stress test of heart blood flow","detail":"A fixed defect means permanently damaged tissue. A reversible defect means an area that shows stress during exercise but recovers at rest.","normal":"0 = Normal\n1 = Fixed defect\n2 = Reversible defect\n3 = Unknown","unit":"0, 1, 2, or 3"},
         ])
 
     elif disease_guide == "Diabetes":
         st.markdown("<div class='section-header'><h3>Diabetes Parameters</h3></div>", unsafe_allow_html=True)
         show_params([
-            {
-                "name": "Pregnancies",
-                "simple": "Number of times pregnant",
-                "detail": "Women who have been pregnant multiple times have a slightly higher risk of developing type 2 diabetes. This may be due to hormonal changes during pregnancy and the stress it places on insulin production.",
-                "normal": "No specific threshold\nHigher numbers slightly increase risk",
-                "unit": "Count"
-            },
-            {
-                "name": "Glucose",
-                "simple": "Amount of sugar in your blood",
-                "detail": "Glucose is the main sugar in your blood and your body's primary source of energy. When you eat, blood glucose rises and insulin helps cells absorb it. In diabetes, this system breaks down and glucose stays too high in the blood, damaging organs over time.",
-                "normal": "Normal: below 100\nPrediabetes: 100–125\nDiabetes: 126 or above",
-                "unit": "mg/dl"
-            },
-            {
-                "name": "Blood Pressure",
-                "simple": "Force of blood against artery walls",
-                "detail": "High blood pressure and diabetes frequently occur together and each condition makes the other worse. Together they significantly increase the risk of heart disease, kidney disease, and stroke.",
-                "normal": "Normal diastolic: below 80\nHigh: 90 or above",
-                "unit": "mm Hg"
-            },
-            {
-                "name": "Skin Thickness",
-                "simple": "Thickness of the skin fold at the back of your upper arm",
-                "detail": "This measurement is used to estimate body fat percentage. A thicker skin fold generally means more body fat stored under the skin. Excess body fat, especially around the abdomen, is strongly associated with insulin resistance and type 2 diabetes.",
-                "normal": "Normal: 10–25 mm\nAbove 35 mm may indicate excess body fat",
-                "unit": "mm"
-            },
-            {
-                "name": "Insulin",
-                "simple": "A hormone made by your pancreas to control blood sugar",
-                "detail": "Insulin acts like a key that lets glucose enter your body's cells for energy. In type 2 diabetes, the body either stops making enough insulin or the cells stop responding to it properly (called insulin resistance). Both result in high blood sugar.",
-                "normal": "Normal fasting: 2–25 IU/ml\nAbove 25 may indicate insulin resistance",
-                "unit": "IU/ml"
-            },
-            {
-                "name": "BMI",
-                "simple": "Body Mass Index — a measure of body fat based on height and weight",
-                "detail": "BMI is calculated as your weight in kilograms divided by your height in meters squared. Being overweight or obese is the single biggest modifiable risk factor for type 2 diabetes. Losing even 5–10% of body weight can significantly reduce diabetes risk.",
-                "normal": "Underweight: below 18.5\nNormal: 18.5–24.9\nOverweight: 25–29.9\nObese: 30 or above",
-                "unit": "kg/m2"
-            },
-            {
-                "name": "Diabetes Pedigree Function",
-                "simple": "A score that estimates your genetic risk based on family history",
-                "detail": "This function calculates how likely you are to have inherited diabetes risk genes based on how many of your relatives have diabetes and how closely related they are. A higher score means more family members with diabetes and therefore a higher genetic risk for you.",
-                "normal": "Low risk: below 0.5\nModerate risk: 0.5–1.0\nHigh risk: above 1.0",
-                "unit": "Score (0 to 2.5)"
-            },
-            {
-                "name": "Age",
-                "simple": "Your age",
-                "detail": "The risk of type 2 diabetes increases with age, especially after 45. This is partly because people tend to be less physically active, lose muscle mass, and gain weight as they get older — all of which increase insulin resistance.",
-                "normal": "Risk increases significantly after age 45",
-                "unit": "Years"
-            },
+            {"name":"Pregnancies","simple":"Number of times pregnant","detail":"Women who have been pregnant multiple times have a slightly higher risk of developing type 2 diabetes due to hormonal changes during pregnancy.","normal":"No specific threshold\nHigher numbers slightly increase risk","unit":"Count"},
+            {"name":"Glucose","simple":"Amount of sugar in your blood","detail":"Glucose is the main sugar in your blood. In diabetes this system breaks down and glucose stays too high, damaging organs over time.","normal":"Normal: below 100\nPrediabetes: 100–125\nDiabetes: 126 or above","unit":"mg/dl"},
+            {"name":"Blood Pressure","simple":"Force of blood against artery walls","detail":"High blood pressure and diabetes frequently occur together and each makes the other worse, significantly increasing risk of heart and kidney disease.","normal":"Normal diastolic: below 80\nHigh: 90 or above","unit":"mm Hg"},
+            {"name":"Skin Thickness","simple":"Thickness of the skin fold at the back of your upper arm","detail":"This estimates body fat percentage. A thicker skin fold means more body fat which is strongly associated with insulin resistance and type 2 diabetes.","normal":"Normal: 10–25 mm\nAbove 35 mm may indicate excess body fat","unit":"mm"},
+            {"name":"Insulin","simple":"A hormone made by your pancreas to control blood sugar","detail":"Insulin lets glucose enter your body's cells for energy. In type 2 diabetes the body stops making enough insulin or cells stop responding to it properly.","normal":"Normal fasting: 2–25 IU/ml\nAbove 25 may indicate insulin resistance","unit":"IU/ml"},
+            {"name":"BMI","simple":"Body Mass Index — measure of body fat based on height and weight","detail":"BMI is weight divided by height squared. Being overweight or obese is the single biggest modifiable risk factor for type 2 diabetes.","normal":"Underweight: below 18.5\nNormal: 18.5–24.9\nOverweight: 25–29.9\nObese: 30 or above","unit":"kg/m2"},
+            {"name":"Diabetes Pedigree Function","simple":"A score estimating your genetic risk based on family history","detail":"This calculates how likely you are to have inherited diabetes risk genes. A higher score means more family members with diabetes and higher genetic risk.","normal":"Low risk: below 0.5\nModerate: 0.5–1.0\nHigh: above 1.0","unit":"Score (0 to 2.5)"},
+            {"name":"Age","simple":"Your age","detail":"Risk of type 2 diabetes increases with age especially after 45, partly because people tend to be less active and gain weight as they get older.","normal":"Risk increases significantly after age 45","unit":"Years"},
         ])
 
     elif disease_guide == "Liver Disease":
         st.markdown("<div class='section-header'><h3>Liver Disease Parameters</h3></div>", unsafe_allow_html=True)
         show_params([
-            {
-                "name": "Age",
-                "simple": "Your age",
-                "detail": "Liver disease can affect people of any age but the risk increases with age due to longer exposure to risk factors such as alcohol, fatty foods, medications, and viral infections like hepatitis.",
-                "normal": "Risk gradually increases with age\nNo specific threshold",
-                "unit": "Years"
-            },
-            {
-                "name": "Gender",
-                "simple": "Your biological sex",
-                "detail": "Men are statistically more likely to develop liver disease, partly due to higher rates of alcohol consumption, certain genetic factors, and differences in fat distribution that affect liver health.",
-                "normal": "0 = Female\n1 = Male",
-                "unit": "0 or 1"
-            },
-            {
-                "name": "Total Bilirubin",
-                "simple": "A yellow pigment produced when old red blood cells break down",
-                "detail": "When red blood cells die, they release a yellow substance called bilirubin. The liver processes and removes it from the blood. If the liver is damaged or not working well, bilirubin builds up in the blood causing yellowing of the skin and eyes called jaundice.",
-                "normal": "Normal: 0.1–1.2 mg/dl\nMild elevation: 1.2–2.0\nHigh (jaundice likely): above 2.0",
-                "unit": "mg/dl"
-            },
-            {
-                "name": "Direct Bilirubin",
-                "simple": "The form of bilirubin that has already been processed by the liver",
-                "detail": "There are two forms of bilirubin — indirect (not yet processed) and direct (processed by the liver). High direct bilirubin specifically points to a problem inside the liver itself or in the bile ducts that carry bile from the liver.",
-                "normal": "Normal: 0.0–0.3 mg/dl\nAbove 0.3 suggests liver issue",
-                "unit": "mg/dl"
-            },
-            {
-                "name": "Alkaline Phosphotase",
-                "simple": "An enzyme found in the liver and bones",
-                "detail": "Alkaline phosphatase is an enzyme produced in the liver, bones, kidneys, and digestive tract. When the liver is damaged or bile ducts are blocked, this enzyme leaks into the bloodstream. High levels are a warning sign of liver disease or bile duct obstruction.",
-                "normal": "Normal: 44–147 IU/L\nAbove 147 may indicate liver damage",
-                "unit": "IU/L"
-            },
-            {
-                "name": "SGPT (ALT)",
-                "simple": "An enzyme that leaks into blood when liver cells are damaged",
-                "detail": "SGPT (also called ALT — Alanine Aminotransferase) is an enzyme found mainly inside liver cells. When liver cells are injured or destroyed by alcohol, fatty liver disease, hepatitis, or medications, they rupture and release SGPT into the blood. It is the most specific blood test for liver cell damage.",
-                "normal": "Normal: 7–56 IU/L\nMildly elevated: 56–100\nHighly elevated: above 100",
-                "unit": "IU/L"
-            },
-            {
-                "name": "SGOT (AST)",
-                "simple": "Another enzyme released when liver or heart cells are damaged",
-                "detail": "SGOT (also called AST — Aspartate Aminotransferase) is found in liver cells, heart muscle, and skeletal muscle. When any of these tissues are damaged, SGOT is released into the blood. It is less specific than SGPT but together they help doctors identify the source and extent of organ damage.",
-                "normal": "Normal: 10–40 IU/L\nElevated: above 40",
-                "unit": "IU/L"
-            },
-            {
-                "name": "Total Proteins",
-                "simple": "Total amount of proteins in your blood",
-                "detail": "The liver manufactures most of the proteins found in your blood, including albumin and globulins. When the liver is severely damaged and cannot function properly, it produces less protein, causing total protein levels to drop. Low levels are a sign of chronic liver failure.",
-                "normal": "Normal: 6.0–8.3 g/dl\nBelow 6.0 may indicate liver or kidney issue",
-                "unit": "g/dl"
-            },
-            {
-                "name": "Albumin",
-                "simple": "The main protein made by the liver",
-                "detail": "Albumin is the most abundant protein in your blood and is made exclusively by the liver. It keeps fluid from leaking out of blood vessels, carries hormones and medications through the blood, and helps maintain blood pressure. Low albumin is one of the most reliable signs of chronic liver disease.",
-                "normal": "Normal: 3.5–5.0 g/dl\nBelow 3.5 suggests liver dysfunction",
-                "unit": "g/dl"
-            },
-            {
-                "name": "Albumin/Globulin Ratio",
-                "simple": "Balance between two types of protein in your blood",
-                "detail": "This ratio compares albumin (made by the liver) to globulins (made mainly by the immune system). In a healthy person albumin is higher than globulins. In liver disease the liver makes less albumin so the ratio drops. A low ratio can also indicate kidney disease or immune system disorders.",
-                "normal": "Normal: 1.0–2.5\nBelow 1.0 may indicate liver or immune issue",
-                "unit": "Ratio"
-            },
+            {"name":"Age","simple":"Your age","detail":"Liver disease risk increases with age due to longer exposure to risk factors such as alcohol, fatty foods, medications, and viral infections like hepatitis.","normal":"Risk gradually increases with age","unit":"Years"},
+            {"name":"Gender","simple":"Your biological sex","detail":"Men are more likely to develop liver disease partly due to higher rates of alcohol consumption and certain genetic factors.","normal":"0 = Female\n1 = Male","unit":"0 or 1"},
+            {"name":"Total Bilirubin","simple":"A yellow pigment produced when red blood cells break down","detail":"The liver processes bilirubin. If damaged, bilirubin builds up causing yellowing of the skin and eyes called jaundice.","normal":"Normal: 0.1–1.2 mg/dl\nMild: 1.2–2.0\nHigh (jaundice): above 2.0","unit":"mg/dl"},
+            {"name":"Direct Bilirubin","simple":"The form of bilirubin processed by the liver","detail":"High direct bilirubin specifically points to a problem inside the liver or in the bile ducts.","normal":"Normal: 0.0–0.3 mg/dl\nAbove 0.3 suggests liver issue","unit":"mg/dl"},
+            {"name":"Alkaline Phosphotase","simple":"An enzyme found in the liver and bones","detail":"When the liver is damaged or bile ducts are blocked, this enzyme leaks into the bloodstream. High levels warn of liver disease.","normal":"Normal: 44–147 IU/L\nAbove 147 may indicate liver damage","unit":"IU/L"},
+            {"name":"SGPT (ALT)","simple":"An enzyme that leaks into blood when liver cells are damaged","detail":"SGPT is found mainly inside liver cells. When they are injured by alcohol, fatty liver, or hepatitis, SGPT is released into blood. It is the most specific test for liver cell damage.","normal":"Normal: 7–56 IU/L\nMildly elevated: 56–100\nHighly elevated: above 100","unit":"IU/L"},
+            {"name":"SGOT (AST)","simple":"Another enzyme released when liver or heart cells are damaged","detail":"SGOT is found in liver, heart, and muscles. Elevated levels suggest liver damage but it is less specific than SGPT.","normal":"Normal: 10–40 IU/L\nElevated: above 40","unit":"IU/L"},
+            {"name":"Total Proteins","simple":"Total amount of proteins in your blood","detail":"The liver makes most blood proteins. When severely damaged, it produces less protein causing total protein levels to drop.","normal":"Normal: 6.0–8.3 g/dl\nBelow 6.0 may indicate liver issue","unit":"g/dl"},
+            {"name":"Albumin","simple":"The main protein made by the liver","detail":"Albumin keeps fluid from leaking out of blood vessels. Low albumin is one of the most reliable signs of chronic liver disease.","normal":"Normal: 3.5–5.0 g/dl\nBelow 3.5 suggests liver dysfunction","unit":"g/dl"},
+            {"name":"Albumin/Globulin Ratio","simple":"Balance between two types of protein in your blood","detail":"In liver disease the liver makes less albumin so this ratio drops. A low ratio can also indicate kidney disease or immune disorders.","normal":"Normal: 1.0–2.5\nBelow 1.0 may indicate liver issue","unit":"Ratio"},
         ])
 
-    st.markdown("<div class='footer'>MediPredict AI · Final Year B.Tech Project · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
+    st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
-# PAGE 3 — DATASET INFO
+# PAGE 4 — DATASET INFO
 # ══════════════════════════════════════════════════════
 elif page == "Dataset Info":
     st.markdown("## Dataset Information")
     st.markdown("<p style='color:#8b8fa8'>Details about the datasets used for training the models</p>", unsafe_allow_html=True)
     st.markdown("---")
 
-    # Heart Disease
     st.markdown("<div class='section-header'><h3>Heart Disease Dataset</h3><p>UCI Heart Disease Dataset</p></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -577,12 +476,11 @@ elif page == "Dataset Info":
     <p style='color:#c0c4d6; margin:0'><span style='color:#7c83fd'>Source:</span> UCI Machine Learning Repository</p>
     <p style='color:#c0c4d6; margin:0'><span style='color:#7c83fd'>Target:</span> Presence (1) or Absence (0) of heart disease</p>
     <p style='color:#c0c4d6; margin:0'><span style='color:#7c83fd'>Features:</span> Age, Sex, Chest Pain Type, Blood Pressure, Cholesterol, ECG, Heart Rate, and more</p>
-    <p style='color:#c0c4d6; margin:0'><span style='color:#7c83fd'>Preprocessing:</span> Median imputation, OrdinalEncoder for categorical, StandardScaler for SVM</p>
+    <p style='color:#c0c4d6; margin:0'><span style='color:#7c83fd'>Preprocessing:</span> Median imputation, OrdinalEncoder, StandardScaler for SVM</p>
     </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Diabetes
     st.markdown("<div class='section-header'><h3>Diabetes Dataset</h3><p>Pima Indians Diabetes Database</p></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -601,7 +499,6 @@ elif page == "Dataset Info":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Liver
     st.markdown("<div class='section-header'><h3>Liver Disease Dataset</h3><p>Indian Liver Patient Dataset (ILPD)</p></div>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -618,10 +515,10 @@ elif page == "Dataset Info":
     <p style='color:#c0c4d6; margin:0'><span style='color:#7c83fd'>Preprocessing:</span> Label encoding for Gender, median imputation, StandardScaler for SVM</p>
     </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div class='footer'>MediPredict AI · Final Year B.Tech Project · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
+    st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════
-# PAGE 4 — HISTORY
+# PAGE 5 — HISTORY
 # ══════════════════════════════════════════════════════
 elif page == "History":
     st.markdown("## Prediction History")
@@ -664,4 +561,4 @@ elif page == "History":
     else:
         st.info("No predictions yet. Go to the Predict page to make your first prediction!")
 
-    st.markdown("<div class='footer'>MediPredict AI · Final Year B.Tech Project · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
+    st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
