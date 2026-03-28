@@ -103,8 +103,10 @@ def load_models():
         "Heart Disease" : joblib.load("saved_models/heart_svm.pkl"),
         "Diabetes"      : joblib.load("saved_models/diabetes_svm.pkl"),
         "Liver Disease" : joblib.load("saved_models/liver_svm.pkl"),
+        "Heart Symptom" : joblib.load("saved_models/heart_attack_symptom_svm.pkl"),
+        "Diabetes Symptom" : joblib.load("saved_models/diabetes_symptom_svm.pkl"),
+        "Liver Symptom" : joblib.load("saved_models/liver_symptom_svm.pkl"),
     }
-
 models = load_models()
 
 with st.sidebar:
@@ -112,6 +114,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Navigation")
     page = st.radio("Navigation", [
+        "General Predict",
         "Predict",
         "AI Health Assistant",
         "Parameter Guide",
@@ -121,10 +124,12 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     <div style='color:#8b8fa8; font-size:0.85rem; line-height:1.8'>
-    <b style='color:#7c83fd'>Models Used:</b><br>
-    SVM (Primary) · Random Forest · XGBoost<br><br>
+    <b style='color:#7c83fd'>For Everyone:</b><br>
+    General Predict · AI Assistant<br><br>
+    <b style='color:#7c83fd'>For Clinicians:</b><br>
+    Clinical Predict (blood test values)<br><br>
     <b style='color:#7c83fd'>Diseases:</b><br>
-    Heart Disease · Diabetes · Liver Disease
+    Heart · Diabetes · Liver
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
@@ -251,7 +256,8 @@ if page == "Predict":
         X_input    = pd.DataFrame([input_data], columns=feature_names)
         model      = models[disease]
         prediction = model.predict(X_input)[0]
-        confidence = model.predict_proba(X_input)[0][prediction] * 100
+        confidence = model.predict_proba(X_input)[0][int(round(prediction))] * 100
+        prediction = int(round(prediction))
         result     = "Positive" if prediction == 1 else "Negative"
 
         st.markdown("---")
@@ -287,91 +293,257 @@ if page == "Predict":
 
     st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
 
+
 # ══════════════════════════════════════════════════════
-# PAGE 2 — AI HEALTH ASSISTANT
+# PAGE — GENERAL PREDICT
+# ══════════════════════════════════════════════════════
+elif page == "General Predict":
+    st.markdown("## 👤 General Health Risk Check")
+    st.markdown("<p style='color:#8b8fa8'>Answer simple Yes/No questions about your symptoms — no medical knowledge needed!</p>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    # Info banner
+    st.markdown("""
+    <div style='background:#1e2130; border-left:4px solid #7c83fd;
+    border-radius:0 10px 10px 0; padding:12px 16px; margin-bottom:16px;'>
+        <p style='color:#7c83fd; margin:0; font-size:0.85rem; font-weight:500'>
+        For Common Users</p>
+        <p style='color:#8b8fa8; margin:4px 0 0 0; font-size:0.85rem'>
+        This screening tool uses symptom-based questions. No blood test or medical report needed.
+        Results are for awareness only — always consult a doctor for proper diagnosis.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    disease = st.selectbox("Select Disease to Check", [
+        "Heart Disease", "Diabetes", "Liver Disease"
+    ])
+    st.markdown(f"<div class='disease-badge'>👤 {disease} · Symptom Check</div>",
+                unsafe_allow_html=True)
+
+    # ── Heart Disease Symptom ───────────────────────────
+    if disease == "Heart Disease":
+        st.markdown("<div class='section-header'><h3>Heart Disease Symptoms</h3><p>Answer based on what you have been experiencing recently</p></div>", unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            age         = st.slider("Age", 10, 90, 40)
+            gender      = st.selectbox("Gender", [0, 1], format_func=lambda x: "Female" if x==0 else "Male")
+            chest_pain  = st.selectbox("Do you have chest pain?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            breath      = st.selectbox("Shortness of breath?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            fatigue     = st.selectbox("Do you feel fatigued/tired?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            palpitation = st.selectbox("Heart palpitations (racing heart)?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            dizziness   = st.selectbox("Do you feel dizzy?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            swelling    = st.selectbox("Swelling in legs or feet?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            pain_arms   = st.selectbox("Pain in arms, jaw, or back?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            cold_sweats = st.selectbox("Cold sweats or nausea?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+        with col2:
+            high_bp     = st.selectbox("Do you have high blood pressure?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            high_chol   = st.selectbox("Do you have high cholesterol?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            diabetes    = st.selectbox("Do you have diabetes?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            smoking     = st.selectbox("Do you smoke?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            obesity     = st.selectbox("Are you overweight/obese?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            sedentary   = st.selectbox("Sedentary lifestyle (no exercise)?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            family_hist = st.selectbox("Family history of heart disease?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            stress      = st.selectbox("Do you have chronic stress?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+
+        input_data = [chest_pain, breath, fatigue, palpitation, dizziness,
+                      swelling, pain_arms, cold_sweats, high_bp, high_chol,
+                      diabetes, smoking, obesity, sedentary, family_hist,
+                      stress, gender, age]
+        feature_names = ['Chest_Pain','Shortness_of_Breath','Fatigue','Palpitations',
+                         'Dizziness','Swelling','Pain_Arms_Jaw_Back','Cold_Sweats_Nausea',
+                         'High_BP','High_Cholesterol','Diabetes','Smoking','Obesity',
+                         'Sedentary_Lifestyle','Family_History','Chronic_Stress',
+                         'Gender','Age']
+        model = models["Heart Symptom"]
+
+        # Warnings
+        warnings = []
+        if chest_pain == 1 and breath == 1:
+            warnings.append("Chest pain with shortness of breath — seek medical attention soon!")
+        if cold_sweats == 1 and pain_arms == 1:
+            warnings.append("Cold sweats with arm/jaw pain — possible heart attack symptom!")
+        for w in warnings: st.warning(w)
+
+    # ── Diabetes Symptom ────────────────────────────────
+    elif disease == "Diabetes":
+        st.markdown("<div class='section-header'><h3>Diabetes Symptoms</h3><p>Answer based on what you have been experiencing recently</p></div>", unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            age         = st.slider("Age", 10, 90, 35)
+            gender      = st.selectbox("Gender", [0,1], format_func=lambda x: "Female" if x==0 else "Male")
+            freq_urine  = st.selectbox("Frequent urination?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            excess_thirst = st.selectbox("Excessive thirst?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            weight_loss = st.selectbox("Sudden weight loss?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            weakness    = st.selectbox("General weakness?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            excess_hunger = st.selectbox("Excessive hunger?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            visual_blur = st.selectbox("Visual blurring?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+        with col2:
+            itching     = st.selectbox("Itching?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            irritability = st.selectbox("Irritability?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            delayed_healing = st.selectbox("Delayed healing of wounds?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            muscle_weak = st.selectbox("Muscle weakness?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            muscle_stiff = st.selectbox("Muscle stiffness?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            hair_loss   = st.selectbox("Hair loss?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            overweight  = st.selectbox("Are you overweight?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+
+        input_data = [age, gender, freq_urine, excess_thirst, weight_loss,
+                      weakness, excess_hunger, visual_blur, itching,
+                      irritability, delayed_healing, muscle_weak,
+                      muscle_stiff, hair_loss, overweight]
+        feature_names = ['Age','Gender','Frequent urination','Excessive thirst',
+                 'sudden weight loss','weakness','Excessive hunger',
+                 'visual blurring','Itching','Irritability',
+                 'delayed healing','Muscle weakness',
+                 'muscle stiffness','Hair loss','Overweight']
+        model = models["Diabetes Symptom"]
+
+        # Warnings
+        warnings = []
+        if freq_urine == 1 and excess_thirst == 1:
+            warnings.append("Frequent urination with excessive thirst — classic diabetes symptoms!")
+        if weight_loss == 1 and weakness == 1:
+            warnings.append("Sudden weight loss with weakness — consider getting a glucose test!")
+        for w in warnings: st.warning(w)
+
+    # ── Liver Disease Symptom ───────────────────────────
+    elif disease == "Liver Disease":
+        st.markdown("<div class='section-header'><h3>Liver Disease Symptoms</h3><p>Answer based on what you have been experiencing recently</p></div>", unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            jaundice    = st.selectbox("Yellowing of skin or eyes (jaundice)?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            nausea      = st.selectbox("Nausea?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            vomiting    = st.selectbox("Vomiting?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            abd_pain    = st.selectbox("Abdominal pain?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+        with col2:
+            fatigue     = st.selectbox("Fatigue or tiredness?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            loss_app    = st.selectbox("Loss of appetite?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            dark_urine  = st.selectbox("Dark colored urine?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+            itching     = st.selectbox("Itching?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
+
+        input_data = [jaundice, nausea, vomiting, abd_pain,
+                      fatigue, loss_app, dark_urine, itching]
+        feature_names = ['jaundice','nausea','vomiting','abdominal_pain',
+                         'fatigue','loss_of_appetite','dark_urine','itching']
+        model = models["Liver Symptom"]
+
+        # Warnings
+        warnings = []
+        if jaundice == 1:
+            warnings.append("Yellowing of skin/eyes detected — please see a doctor immediately!")
+        if dark_urine == 1 and abd_pain == 1:
+            warnings.append("Dark urine with abdominal pain — possible liver issue!")
+        for w in warnings: st.warning(w)
+
+    # ── Predict Button ──────────────────────────────────
+    st.markdown("---")
+    if st.button("Check My Risk", type="primary"):
+        X_input    = pd.DataFrame([input_data], columns=feature_names)
+        prediction = model.predict(X_input)[0]
+        prediction = int(round(prediction))
+        confidence = model.predict_proba(X_input)[0][prediction] * 100
+        result     = "Positive" if prediction == 1 else "Negative"
+
+        st.markdown("---")
+        st.markdown("### Result")
+
+        if prediction == 1:
+            st.markdown(f"""
+            <div class='result-positive'>
+                <h2>⚠️ Risk Detected</h2>
+                <p>Prediction: {result} &nbsp;|&nbsp; Confidence: {confidence:.1f}%</p>
+                <p style='color:#ff8a80; font-size:0.85rem; margin-top:10px'>
+                Based on your symptoms there is a potential risk. Please consult a doctor for proper diagnosis.
+                </p>
+            </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class='result-negative'>
+                <h2>✅ No Significant Risk</h2>
+                <p>Prediction: {result} &nbsp;|&nbsp; Confidence: {confidence:.1f}%</p>
+                <p style='color:#69f0ae; font-size:0.85rem; margin-top:10px'>
+                No significant risk detected based on your symptoms. Maintain a healthy lifestyle!
+                </p>
+            </div>""", unsafe_allow_html=True)
+
+        save_prediction(
+            disease=f"{disease} (Symptom)",
+            input_data=dict(zip(feature_names, input_data)),
+            prediction=result,
+            confidence=confidence,
+            model_used="SVM Symptom"
+        )
+        st.toast("Result saved to history!", icon="✅")
+
+    st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════
+# PAGE 2 — AI HEALTH ASSISTANT (Connected to ML)
 # ══════════════════════════════════════════════════════
 elif page == "AI Health Assistant":
     st.markdown("## 🧬 AI Health Assistant")
-    st.markdown("<p style='color:#8b8fa8'>Speak or type your symptoms — AI will respond in text and voice</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#8b8fa8'>Chat about your symptoms — AI will collect information and run our ML model to assess your risk</p>", unsafe_allow_html=True)
     st.markdown("---")
 
-    # ── CSS ─────────────────────────────────────────────
     st.markdown("""
     <style>
-    .chat-container {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        padding: 16px 0 20px 0;
-    }
-    .bubble-row-user {
-        display: flex;
-        justify-content: flex-end;
-        align-items: flex-end;
-        gap: 8px;
-    }
-    .bubble-row-ai {
-        display: flex;
-        justify-content: flex-start;
-        align-items: flex-end;
-        gap: 8px;
-    }
+    .chat-container { display:flex; flex-direction:column; gap:16px; padding:16px 0 20px 0; }
+    .bubble-row-user { display:flex; justify-content:flex-end; align-items:flex-end; gap:8px; }
+    .bubble-row-ai { display:flex; justify-content:flex-start; align-items:flex-end; gap:8px; }
     .bubble-user {
         background: linear-gradient(135deg, #7c83fd, #5c63d8);
-        color: white;
-        padding: 12px 16px;
+        color: white; padding: 12px 16px;
         border-radius: 18px 18px 4px 18px;
-        max-width: 70%;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        word-wrap: break-word;
+        max-width: 70%; font-size: 0.95rem; line-height: 1.6; word-wrap: break-word;
     }
     .bubble-ai {
-        background: #1e2130;
-        color: #c0c4d6;
+        background: #1e2130; color: #c0c4d6;
         padding: 12px 16px;
         border-radius: 18px 18px 18px 4px;
-        max-width: 70%;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        border: 1px solid #2d2f3e;
-        word-wrap: break-word;
+        max-width: 70%; font-size: 0.95rem; line-height: 1.6;
+        border: 1px solid #2d2f3e; word-wrap: break-word;
+    }
+    .bubble-result {
+        background: linear-gradient(135deg, #1e2130, #252840);
+        border: 2px solid #7c83fd;
+        border-radius: 12px; padding: 16px;
+        max-width: 80%; font-size: 0.9rem; line-height: 1.7;
+        color: #c0c4d6;
     }
     .av-user {
-        width: 32px; height: 32px;
-        border-radius: 50%;
+        width:32px; height:32px; border-radius:50%;
         background: linear-gradient(135deg, #7c83fd, #5c63d8);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 14px; flex-shrink: 0;
+        display:flex; align-items:center; justify-content:center;
+        font-size:14px; flex-shrink:0;
     }
     .av-ai {
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        background: #1e2130;
-        border: 1px solid #2d2f3e;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 14px; flex-shrink: 0;
+        width:32px; height:32px; border-radius:50%;
+        background:#1e2130; border:1px solid #2d2f3e;
+        display:flex; align-items:center; justify-content:center;
+        font-size:14px; flex-shrink:0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # ── Initialize session state ───────────────────────
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "conversation" not in st.session_state:
         st.session_state.conversation = []
     if "last_audio" not in st.session_state:
         st.session_state.last_audio = None
-    if "last_ai_reply" not in st.session_state:
-        st.session_state.last_ai_reply = ""
+    if "input_value" not in st.session_state:
+        st.session_state.input_value = ""
+    if "prediction_done" not in st.session_state:
+        st.session_state.prediction_done = False
 
-    # ── API key ────────────────────────────────────────
     api_key = st.secrets.get("GROQ_API_KEY", None)
     if not api_key:
         st.error("API key not configured.")
         st.stop()
 
-    # ── Language selector ──────────────────────────────
     col_lang, _ = st.columns([2, 3])
     with col_lang:
         language = st.selectbox(
@@ -389,27 +561,48 @@ elif page == "AI Health Assistant":
         "Bengali":  {"code": "bn-IN", "tts": "bn"},
         "Marathi":  {"code": "mr-IN", "tts": "mr"},
     }
-    lang_code   = lang_map[language]["code"]
-    lang_tts    = lang_map[language]["tts"]
+    lang_code = lang_map[language]["code"]
+    lang_tts  = lang_map[language]["tts"]
 
-    # ── System prompt ──────────────────────────────────
-    SYSTEM_PROMPT = """You are MediPredict AI Health Assistant, a friendly medical screening chatbot.
-Your job is to:
-1. Have a friendly conversation about the user's symptoms, age, and health concerns
-2. Ask relevant follow up questions naturally, one or two at a time
-3. Assess their risk for Heart Disease, Diabetes, or Liver Disease based on what they share
-4. Explain everything in very simple language anyone can understand
-5. Always recommend consulting a real doctor for proper diagnosis
-6. Be warm, empathetic and reassuring — never scary or alarmist
-Important rules:
-- Never diagnose — only assess risk level as Low, Moderate, or High
-- Always recommend seeing a doctor if risk is moderate or high
-- Use simple everyday language, avoid medical jargon
-- If user mentions emergency symptoms like severe chest pain or difficulty breathing, tell them to call emergency services immediately
-- You are a screening tool, not a replacement for medical care
-Start by warmly greeting the user and asking what health concern brings them here today."""
+    SYSTEM_PROMPT = """You are MediPredict AI — a medical screening chatbot connected to ML models.
 
-    # ── Display chat bubbles ───────────────────────────
+Ask symptoms for ONE disease based on user concern:
+- Heart Disease keys: Chest_Pain, Shortness_of_Breath, Fatigue, Palpitations, Dizziness, Swelling, Pain_Arms_Jaw_Back, Cold_Sweats_Nausea, High_BP, High_Cholesterol, Diabetes, Smoking, Obesity, Sedentary_Lifestyle, Family_History, Chronic_Stress, Gender, Age
+- Diabetes keys: Age, Gender, Frequent urination, Excessive thirst, sudden weight loss, weakness, Excessive hunger, visual blurring, Itching, Irritability, delayed healing, Muscle weakness, muscle stiffness, Hair loss, Overweight
+- Liver Disease keys: jaundice, nausea, vomiting, abdominal_pain, fatigue, loss_of_appetite, dark_urine, itching
+
+RULES:
+1. Ask 2-3 questions at a time
+2. After EXACTLY 2 rounds of answers OUTPUT THE PREDICTION BLOCK — no exceptions
+3. Use 1=Yes, 0=No, actual number for Age, 1=Male/0=Female for Gender
+4. For emergency symptoms tell user to call emergency services immediately
+
+AFTER 2 ROUNDS YOU MUST OUTPUT THIS AT THE END OF YOUR RESPONSE:
+[PREDICTION]
+{"ready_to_predict": true, "disease": "Diabetes", "symptoms": {"Age": 35, "Gender": 1, "Frequent urination": 1, "Excessive thirst": 1, "sudden weight loss": 0, "weakness": 1, "Excessive hunger": 1, "visual blurring": 1, "Itching": 0, "Irritability": 1, "delayed healing": 1, "Muscle weakness": 0, "muscle stiffness": 0, "Hair loss": 0, "Overweight": 0}}
+[/PREDICTION]
+
+Replace values with actual user answers. NEVER ask a 3rd round."""
+
+    def run_ml_prediction(disease, symptoms):
+        try:
+            model_map = {
+                "Heart Disease":  models["Heart Symptom"],
+                "Diabetes":       models["Diabetes Symptom"],
+                "Liver Disease":  models["Liver Symptom"],
+            }
+            model = model_map.get(disease)
+            if not model:
+                return None, None
+            X_input = pd.DataFrame([symptoms])
+            prediction = model.predict(X_input)[0]
+            prediction = int(round(prediction))
+            confidence = model.predict_proba(X_input)[0][prediction] * 100
+            result = "Positive" if prediction == 1 else "Negative"
+            return result, confidence
+        except Exception as e:
+            return None, str(e)
+
     if st.session_state.messages:
         chat_html = "<div class='chat-container'>"
         for msg in st.session_state.messages:
@@ -419,11 +612,17 @@ Start by warmly greeting the user and asking what health concern brings them her
                     <div class='bubble-user'>{msg['content']}</div>
                     <div class='av-user'>👤</div>
                 </div>"""
-            else:
+            elif msg["role"] == "assistant":
                 chat_html += f"""
                 <div class='bubble-row-ai'>
                     <div class='av-ai'>🧬</div>
-                    <div class='bubble-ai'>🔊 {msg['content']}</div>
+                    <div class='bubble-ai'>{msg['content']}</div>
+                </div>"""
+            elif msg["role"] == "prediction":
+                chat_html += f"""
+                <div class='bubble-row-ai'>
+                    <div class='av-ai'>📊</div>
+                    <div class='bubble-result'>{msg['content']}</div>
                 </div>"""
         chat_html += "</div>"
         st.markdown(chat_html, unsafe_allow_html=True)
@@ -431,32 +630,21 @@ Start by warmly greeting the user and asking what health concern brings them her
         st.markdown("""
         <div style='text-align:center; padding:40px; color:#4a4d5e;'>
             <div style='font-size:2.5rem'>🧬</div>
-            <p style='margin-top:8px'>Start by describing your symptoms below</p>
+            <p style='margin-top:8px'>Tell me about your symptoms and I will assess your health risk using our ML model</p>
         </div>""", unsafe_allow_html=True)
 
-    # ── Play last AI audio ─────────────────────────────
     if st.session_state.last_audio:
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
-        col_replay, _ = st.columns([1, 4])
-        with col_replay:
-            if st.button("🔊 Replay"):
-                st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
 
     st.markdown("---")
 
-
-    # ── Initialize voice text ──────────────────────────
-    if "voice_result" not in st.session_state:
-        st.session_state.voice_result = ""
-
-    # ── Browser voice input ────────────────────────────
     voice_component = f"""
     <div style="margin-bottom:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
             <button id="micBtn" onclick="startListening()" style="
                 background: linear-gradient(135deg, #7c83fd, #5c63d8);
-                color: white; border: none; border-radius: 8px;
-                padding: 8px 16px; font-size: 0.9rem; cursor: pointer;">
+                color:white; border:none; border-radius:8px;
+                padding:8px 16px; font-size:0.9rem; cursor:pointer;">
                 🎤 Speak ({language})
             </button>
             <span id="status" style="color:#8b8fa8; font-size:0.85rem;"></span>
@@ -474,25 +662,19 @@ Start by warmly greeting the user and asking what health concern brings them her
         const recognition = new SR();
         recognition.lang = '{lang_code}';
         recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
         btn.innerHTML = '🔴 Listening...';
         btn.style.background = '#ff4b4b';
-        status.innerHTML = '<span style="color:#7c83fd">Listening... speak now</span>';
+        status.innerHTML = '<span style="color:#7c83fd">Listening...</span>';
         recognition.onresult = function(e) {{
             const text = e.results[0][0].transcript;
             status.innerHTML = '<span style="color:#00c853">Got: ' + text + '</span>';
-            // Send to Streamlit via query param trick
-            const url = new URL(window.parent.location);
-            url.searchParams.set('voice_input', encodeURIComponent(text));
-            window.parent.history.replaceState(null, '', url);
-            // Also try to fill the input directly
             setTimeout(() => {{
                 const inputs = window.parent.document.querySelectorAll('input[type="text"]');
                 for (let inp of inputs) {{
                     if (inp.placeholder && inp.placeholder.includes('symptoms')) {{
                         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                         setter.call(inp, text);
-                        inp.dispatchEvent(new Event('input', {{bubbles: true}}));
+                        inp.dispatchEvent(new Event('input', {{bubbles:true}}));
                         inp.focus();
                         break;
                     }}
@@ -506,7 +688,7 @@ Start by warmly greeting the user and asking what health concern brings them her
         recognition.onerror = function(e) {{
             btn.innerHTML = '🎤 Speak ({language})';
             btn.style.background = 'linear-gradient(135deg, #7c83fd, #5c63d8)';
-            status.innerHTML = '<span style="color:#ff4b4b">Error: ' + e.error + '. Allow mic permission.</span>';
+            status.innerHTML = '<span style="color:#ff4b4b">Error: ' + e.error + '</span>';
         }};
         recognition.start();
     }}
@@ -514,23 +696,6 @@ Start by warmly greeting the user and asking what health concern brings them her
     """
     st.components.v1.html(voice_component, height=70)
 
-
-
-    # ── Initialize input state ─────────────────────────
-    if "input_value" not in st.session_state:
-        st.session_state.input_value = ""
-
-    # ── Check for voice input from query params ────────
-    try:
-        params = st.query_params
-        if "voice_input" in params:
-            st.session_state.input_value = params["voice_input"]
-            st.session_state.voice_result = params["voice_input"]
-            st.query_params.clear()
-    except Exception:
-        pass
-
-    # ── Text input + Send ──────────────────────────────
     col1, col2 = st.columns([5, 1])
     with col1:
         user_input = st.text_input(
@@ -548,60 +713,113 @@ Start by warmly greeting the user and asking what health concern brings them her
             st.session_state.messages = []
             st.session_state.conversation = []
             st.session_state.last_audio = None
-            st.session_state.last_ai_reply = ""
-            st.session_state.voice_result = ""
             st.session_state.input_value = ""
+            st.session_state.prediction_done = False
             st.rerun()
 
-    # ── Process message ────────────────────────────────
     if send_clicked and user_input.strip():
         message_to_send = user_input.strip()
-
-        # ── Clear input BEFORE rerun ───────────────────
         st.session_state.input_value = ""
-        st.session_state.voice_result = ""
 
-        st.session_state.messages.append({
-            "role": "user",
-            "content": message_to_send
-        })
-        st.session_state.conversation.append({
-            "role": "user",
-            "content": message_to_send
-        })
+        st.session_state.messages.append({"role": "user", "content": message_to_send})
+        st.session_state.conversation.append({"role": "user", "content": message_to_send})
 
         with st.spinner("Thinking..."):
             try:
                 from groq import Groq
+                import json
+                import re
+
                 client = Groq(api_key=api_key)
                 response = client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
-                    max_tokens=1024,
+                    max_tokens=2048,
                     messages=[{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.conversation
                 )
                 assistant_reply = response.choices[0].message.content
 
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": assistant_reply
-                })
-                st.session_state.conversation.append({
-                    "role": "assistant",
-                    "content": assistant_reply
-                })
-                st.session_state.last_ai_reply = assistant_reply
+                # ── Check for prediction block ─────────────
+                json_match = re.search(
+                    r'\[PREDICTION\]\s*(\{.*?"ready_to_predict".*?\})\s*\[/PREDICTION\]',
+                    assistant_reply, re.DOTALL
+                )
 
-                # Generate TTS
-                try:
-                    from gtts import gTTS
-                    import io
-                    tts = gTTS(text=assistant_reply, lang=lang_tts, slow=False)
-                    audio_buffer = io.BytesIO()
-                    tts.write_to_fp(audio_buffer)
-                    audio_buffer.seek(0)
-                    st.session_state.last_audio = audio_buffer.read()
-                except Exception:
-                    st.session_state.last_audio = None
+                if json_match and not st.session_state.prediction_done:
+                    try:
+                        prediction_data = json.loads(json_match.group(1))
+                        if prediction_data.get("ready_to_predict"):
+                            disease  = prediction_data.get("disease")
+                            symptoms = prediction_data.get("symptoms", {})
+                            result, confidence = run_ml_prediction(disease, symptoms)
+
+                            clean_reply = re.sub(
+                                r'\[PREDICTION\].*?\[/PREDICTION\]',
+                                '', assistant_reply, flags=re.DOTALL
+                            ).strip()
+
+                            if clean_reply:
+                                st.session_state.messages.append({"role": "assistant", "content": clean_reply})
+                                st.session_state.conversation.append({"role": "assistant", "content": clean_reply})
+
+                            if result:
+                                if result == "Positive":
+                                    result_html = f"""
+                                    <b style='color:#ff4b4b; font-size:1.1rem'>⚠️ Risk Detected — {disease}</b><br><br>
+                                    <b>ML Model Prediction:</b> {result}<br>
+                                    <b>Confidence:</b> {confidence:.1f}%<br>
+                                    <b>Model:</b> SVM (Symptom-based)<br><br>
+                                    <span style='color:#ff8a80; font-size:0.85rem'>
+                                    This is a screening result. Please consult a qualified doctor for proper diagnosis.
+                                    </span>"""
+                                else:
+                                    result_html = f"""
+                                    <b style='color:#00c853; font-size:1.1rem'>✅ No Significant Risk — {disease}</b><br><br>
+                                    <b>ML Model Prediction:</b> {result}<br>
+                                    <b>Confidence:</b> {confidence:.1f}%<br>
+                                    <b>Model:</b> SVM (Symptom-based)<br><br>
+                                    <span style='color:#69f0ae; font-size:0.85rem'>
+                                    No significant risk detected. Maintain a healthy lifestyle.
+                                    </span>"""
+
+                                st.session_state.messages.append({"role": "prediction", "content": result_html})
+                                save_prediction(
+                                    disease=f"{disease} (Chat)",
+                                    input_data=symptoms,
+                                    prediction=result,
+                                    confidence=confidence,
+                                    model_used="SVM Symptom (Chat)"
+                                )
+                                st.session_state.prediction_done = True
+
+                            if clean_reply:
+                                try:
+                                    from gtts import gTTS
+                                    import io
+                                    tts = gTTS(text=clean_reply[:500], lang=lang_tts, slow=False)
+                                    buf = io.BytesIO()
+                                    tts.write_to_fp(buf)
+                                    buf.seek(0)
+                                    st.session_state.last_audio = buf.read()
+                                except Exception:
+                                    st.session_state.last_audio = None
+
+                    except json.JSONDecodeError:
+                        st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+                        st.session_state.conversation.append({"role": "assistant", "content": assistant_reply})
+
+                else:
+                    st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+                    st.session_state.conversation.append({"role": "assistant", "content": assistant_reply})
+                    try:
+                        from gtts import gTTS
+                        import io
+                        tts = gTTS(text=assistant_reply[:500], lang=lang_tts, slow=False)
+                        buf = io.BytesIO()
+                        tts.write_to_fp(buf)
+                        buf.seek(0)
+                        st.session_state.last_audio = buf.read()
+                    except Exception:
+                        st.session_state.last_audio = None
 
             except Exception as e:
                 st.error(f"API Error: {str(e)}")
@@ -609,7 +827,6 @@ Start by warmly greeting the user and asking what health concern brings them her
         st.rerun()
 
     st.markdown("<div class='footer'>MediPredict AI · Multi Disease Prediction System · Developed by Rahul Raj Singh</div>", unsafe_allow_html=True)
-
 # ══════════════════════════════════════════════════════
 # PAGE 3 — PARAMETER GUIDE
 # ══════════════════════════════════════════════════════
